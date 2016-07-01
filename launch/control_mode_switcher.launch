@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+
+<launch>
+  <rosparam file="$(find thor_mang_control_mode_switcher)/config/control_modes.yaml" />
+
+  <node name="control_mode_switcher_node" pkg="thor_mang_control_mode_switcher" type="thor_mang_control_mode_switcher_node" respawn="true" output="screen" />
+</launch>
