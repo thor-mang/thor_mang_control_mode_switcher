@@ -62,7 +62,7 @@ control_mode_switcher:
                 - "manipulate_compliant_admittance"
 
         whole_body:
-            ctrl_ctrl_modules: ["ros_control_module"]            
+            ctrl_modules: ["ros_control_module"]            
             desired_controllers_to_start: ["head_traj_controller", "torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller", " left_leg_traj_controller", "right_leg_traj_controller"]
             transitions:
                 - "stand"
@@ -71,14 +71,14 @@ control_mode_switcher:
                 - "walk_manipulate"
 
         manipulate_compliant_admittance:
-            ctrl_ctrl_modules: ["base_module", "ros_control_module"]            
+            ctrl_modules: ["base_module", "ros_control_module"]            
             desired_controllers_to_start: ["head_traj_controller", "torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller"]
             transitions:
                 - "stand"
                 - "manipulate"
 
         shutdown:
-            ctrl_ctrl_modules: ["ros_control_module"]
+            ctrl_modules: ["ros_control_module"]
             desired_controllers_to_start: ["head_traj_controller", "torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller", " left_leg_traj_controller", "right_leg_traj_controller"]
             transitions:
                 - "stop"
