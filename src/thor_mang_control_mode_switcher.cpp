@@ -404,8 +404,16 @@ void ControlModeSwitcher::stepPlanDoneCb(const actionlib::SimpleClientGoalState&
 
 void ControlModeSwitcher::parseParameters(ros::NodeHandle nh)
 {
+  std::vector<std::string> default_ctrl_modules;
+  nh.getParam("control_mode_switcher/control_mode_to_controllers/all/ctrl_modules", default_ctrl_modules);
+
+  XmlRpc::XmlRpcValue default_ctrl_modules_param;
+  nh.getParam("control_mode_switcher/control_mode_to_controllers/all/joint_ctrl_modules", default_ctrl_modules_param);
+  std::vector<std::pair<std::string, std::string>> default_joint_ctrl_modules = parseJointCtrlModules(default_ctrl_modules_param);
+
   std::vector<std::string> default_desired_controllers;
   nh.getParam("control_mode_switcher/control_mode_to_controllers/all/desired_controllers_to_start", default_desired_controllers);
+
   std::vector<std::string> default_allowed_transitions;
   nh.getParam("control_mode_switcher/control_mode_to_controllers/all/transitions", default_allowed_transitions);
 
@@ -413,7 +421,7 @@ void ControlModeSwitcher::parseParameters(ros::NodeHandle nh)
   modes_[current_mode_name_].allowed_transitions_ = default_allowed_transitions;
 
   XmlRpc::XmlRpcValue modes;
-  nh.getParam("control_mode_switcher/control_mode_to_controllers/", modes);
+  nh.getParam("control_mode_switcher/control_mode_to_controllers", modes);
 
   // iterate over all given modes
   if (modes.getType() == XmlRpc::XmlRpcValue::TypeStruct)
@@ -433,30 +441,7 @@ void ControlModeSwitcher::parseParameters(ros::NodeHandle nh)
           // get control modules for each joint
           if (attribute_name == "joint_ctrl_modules")
           {
-            XmlRpc::XmlRpcValue joint_ctrl_modules = attributes_itr->second;
-
-            if (joint_ctrl_modules.getType() == XmlRpc::XmlRpcValue::TypeArray)
-            {
-              // iterate over each motion module
-              for (size_t module_idx = 0; module_idx < joint_ctrl_modules.size(); module_idx++)
-              {
-                XmlRpc::XmlRpcValue module = joint_ctrl_modules[module_idx];
-                if (module.getType() != XmlRpc::XmlRpcValue::TypeStruct)
-                {
-                  ROS_ERROR("Couldn't load joint_ctrl_modules for mode '%s'!", mode_name.c_str());
-                  continue;
-                }
-
-                for (XmlRpc::XmlRpcValue::iterator module_itr = module.begin(); module_itr != module.end(); module_itr++)
-                {
-                  std::string module_name = module_itr->first;
-                  XmlRpc::XmlRpcValue joints = module_itr->second;
-
-                  for (size_t joints_idx = 0; joints_idx < joints.size(); joints_idx++)
-                    modes_[mode_name].joint_ctrl_modules_.push_back(std::make_pair(module_name, joints[joints_idx]));
-                }
-              }
-            }
+            modes_[mode_name].joint_ctrl_modules_ = parseJointCtrlModules(attributes_itr->second);
           }
           // load control modules to be started
           else if (attribute_name == "ctrl_modules" && attributes_itr->second.getType() == XmlRpc::XmlRpcValue::TypeArray)
@@ -471,9 +456,6 @@ void ControlModeSwitcher::parseParameters(ros::NodeHandle nh)
             // get controllers to be active in given mode
             for (size_t idx = 0; idx < attributes_itr->second.size(); idx++)
               modes_[mode_name].desired_controllers_.push_back(attributes_itr->second[idx]);
-
-            // add default controllers
-            modes_[mode_name].desired_controllers_.insert(modes_[mode_name].desired_controllers_.end(), default_desired_controllers.begin(), default_desired_controllers.end());
           }
           // load list of valid transitions from this mode
           else if (attribute_name == "transitions" && attributes_itr->second.getType() == XmlRpc::XmlRpcValue::TypeArray)
@@ -481,14 +463,20 @@ void ControlModeSwitcher::parseParameters(ros::NodeHandle nh)
             // get allowed transitions in given mode
             for (size_t idx = 0; idx < attributes_itr->second.size(); idx++)
               modes_[mode_name].allowed_transitions_.push_back(attributes_itr->second[idx]);
-
-            // add default transitions
-            modes_[mode_name].allowed_transitions_.insert(modes_[mode_name].allowed_transitions_.end(), default_allowed_transitions.begin(), default_allowed_transitions.end());
           }
         }
       }
       else
         ROS_WARN("[ControlModeSwitcher] Couldn't load attributes of mode '%s' from param server.", mode_name.c_str());
+
+      // add default control modules
+      modes_[mode_name].ctrl_modules_.insert(modes_[mode_name].ctrl_modules_.end(), default_ctrl_modules.begin(), default_ctrl_modules.end());
+      // add default joint control modules
+      modes_[mode_name].joint_ctrl_modules_.insert(modes_[mode_name].joint_ctrl_modules_.end(), default_joint_ctrl_modules.begin(), default_joint_ctrl_modules.end());
+      // add default controllers
+      modes_[mode_name].desired_controllers_.insert(modes_[mode_name].desired_controllers_.end(), default_desired_controllers.begin(), default_desired_controllers.end());
+      // add default transitions
+      modes_[mode_name].allowed_transitions_.insert(modes_[mode_name].allowed_transitions_.end(), default_allowed_transitions.begin(), default_allowed_transitions.end());
     }
   }
   else
@@ -496,5 +484,35 @@ void ControlModeSwitcher::parseParameters(ros::NodeHandle nh)
     ROS_ERROR("[ControlModeSwitcher] Couldn't load modes from param server.");
     exit(-1);
   }
+}
+
+std::vector<std::pair<std::string, std::string>> ControlModeSwitcher::parseJointCtrlModules(XmlRpc::XmlRpcValue param) const
+{
+  std::vector<std::pair<std::string, std::string>> joint_ctrl_modules;
+
+  if (param.getType() == XmlRpc::XmlRpcValue::TypeArray)
+  {
+    // iterate over each motion module
+    for (size_t module_idx = 0; module_idx < param.size(); module_idx++)
+    {
+      XmlRpc::XmlRpcValue module = param[module_idx];
+      if (module.getType() != XmlRpc::XmlRpcValue::TypeStruct)
+      {
+        ROS_ERROR("Couldn't load joint_ctrl_modules!");
+        continue;
+      }
+
+      for (XmlRpc::XmlRpcValue::iterator module_itr = module.begin(); module_itr != module.end(); module_itr++)
+      {
+        std::string module_name = module_itr->first;
+        XmlRpc::XmlRpcValue joints = module_itr->second;
+
+        for (size_t joints_idx = 0; joints_idx < joints.size(); joints_idx++)
+          joint_ctrl_modules.push_back(std::make_pair(module_name, joints[joints_idx]));
+      }
+    }
+  }
+
+  return joint_ctrl_modules;
 }
 }

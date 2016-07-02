@@ -2,6 +2,9 @@ control_mode_switcher:
     control_mode_to_controllers:
         # global settings
         all:
+            joint_ctrl_modules: 
+               - ros_control_module: ["head_p", "head_y", "l_f0_j0", "l_f1_j0", "r_f0_j0", "r_f1_j0"]
+            desired_controllers_to_start: ["head_traj_controller", "left_hand_traj_controller", "right_hand_traj_controller"]
             transitions:
                 - "stop"
 
@@ -26,8 +29,8 @@ control_mode_switcher:
         stand:
             ctrl_modules: ["base_module"]
             joint_ctrl_modules: 
-               - ros_control_module: ["head_p", "head_y", "torso_y", "l_arm_sh_p1", "l_arm_sh_r", "l_arm_sh_p2", "l_arm_el_y", "l_arm_wr_r", "l_arm_wr_y", "l_arm_wr_p", "r_arm_sh_p1", "r_arm_sh_r", "r_arm_sh_p2", "r_arm_el_y", "r_arm_wr_r", "r_arm_wr_y", "r_arm_wr_p"]
-            desired_controllers_to_start: ["head_traj_controller", "torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller"]
+               - ros_control_module: ["torso_y", "l_arm_sh_p1", "l_arm_sh_r", "l_arm_sh_p2", "l_arm_el_y", "l_arm_wr_r", "l_arm_wr_y", "l_arm_wr_p", "r_arm_sh_p1", "r_arm_sh_r", "r_arm_sh_p2", "r_arm_el_y", "r_arm_wr_r", "r_arm_wr_y", "r_arm_wr_p"]
+            desired_controllers_to_start: ["torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller"]
             transitions:
                 - "walk"
                 - "manipulate"
@@ -45,7 +48,7 @@ control_mode_switcher:
             joint_ctrl_modules: 
                - ros_control_module: ["head_p", "head_y", "torso_y", "l_arm_sh_p1", "l_arm_sh_r", "l_arm_sh_p2", "l_arm_el_y", "l_arm_wr_r", "l_arm_wr_y", "l_arm_wr_p", "r_arm_sh_p1", "r_arm_sh_r", "r_arm_sh_p2", "r_arm_el_y", "r_arm_wr_r", "r_arm_wr_y", "r_arm_wr_p"]
                - walk_control_module: ["l_leg_hip_y", "l_leg_hip_r", "l_leg_hip_p", "l_leg_kn_p", "l_leg_an_p", "l_leg_an_r", "r_leg_hip_y", "r_leg_hip_r", "r_leg_hip_p", "r_leg_kn_p", "r_leg_an_p", "r_leg_an_r"]
-            desired_controllers_to_start: ["head_traj_controller", "torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller"]
+            desired_controllers_to_start: ["torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller"]
             transitions:
                 - "walk"
                 - "stand"
@@ -54,7 +57,7 @@ control_mode_switcher:
             ctrl_modules: ["base_module"]
             joint_ctrl_modules: 
                - ros_control_module: ["head_p", "head_y", "torso_y", "l_arm_sh_p1", "l_arm_sh_r", "l_arm_sh_p2", "l_arm_el_y", "l_arm_wr_r", "l_arm_wr_y", "l_arm_wr_p", "r_arm_sh_p1", "r_arm_sh_r", "r_arm_sh_p2", "r_arm_el_y", "r_arm_wr_r", "r_arm_wr_y", "r_arm_wr_p"]
-            desired_controllers_to_start: ["head_traj_controller", "torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller"]
+            desired_controllers_to_start: ["torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller"]
             transitions:
                 - "stand"
                 - "walk_manipulate"
@@ -63,7 +66,7 @@ control_mode_switcher:
 
         whole_body:
             ctrl_modules: ["ros_control_module"]            
-            desired_controllers_to_start: ["head_traj_controller", "torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller", "left_leg_traj_controller", "right_leg_traj_controller"]
+            desired_controllers_to_start: ["torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller", "left_leg_traj_controller", "right_leg_traj_controller"]
             transitions:
                 - "stand"
                 - "stop"
@@ -72,13 +75,13 @@ control_mode_switcher:
 
         manipulate_compliant_admittance:
             ctrl_modules: ["base_module", "ros_control_module"]            
-            desired_controllers_to_start: ["head_traj_controller", "torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller"]
+            desired_controllers_to_start: ["torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller"]
             transitions:
                 - "stand"
                 - "manipulate"
 
         shutdown:
             ctrl_modules: ["ros_control_module"]
-            desired_controllers_to_start: ["head_traj_controller", "torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller", "left_leg_traj_controller", "right_leg_traj_controller"]
+            desired_controllers_to_start: ["torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller", "left_leg_traj_controller", "right_leg_traj_controller"]
             transitions:
                 - "stop"

@@ -69,6 +69,7 @@ protected:
 
 private:
   void parseParameters(ros::NodeHandle nh);
+  std::vector<std::pair<std::string, std::string>> parseJointCtrlModules(XmlRpc::XmlRpcValue param) const;
 
   ros::NodeHandle nh_;
 
