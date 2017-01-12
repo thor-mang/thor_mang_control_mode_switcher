@@ -75,7 +75,7 @@ control_mode_switcher:
 
         manipulate_compliant_admittance:
             ctrl_modules: ["base_module", "ros_control_module"]            
-            desired_controllers_to_start: ["torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller"]
+            desired_controllers_to_start: ["torso_traj_controller", "right_arm_compliant_controller", "left_arm_compliant_controller"]
             transitions:
                 - "stand"
                 - "manipulate"
