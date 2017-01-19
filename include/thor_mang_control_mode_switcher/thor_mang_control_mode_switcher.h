@@ -48,24 +48,12 @@ protected:
   void getControlModesCallback(const thor_mang_control_msgs::GetControlModesGoalConstPtr& goal);
   void executeSwitchControlModeCallback(const thor_mang_control_msgs::ChangeControlModeGoalConstPtr& goal);
 
-  //void notifyNewControlMode(std::string new_mode, int new_idx, vigir_control_msgs::VigirControlMode msg);
   void allowAllModeTransitionsCb(const std_msgs::Bool& allow);
 
   thor_mang_control_msgs::ControlModeStatus changeControlMode(std::string requested_mode);
 
-  void trajectoryActiveCB();
-  void trajectoryFeedbackCB(const control_msgs::FollowJointTrajectoryFeedbackConstPtr& feedback);
-  void trajectoryLeftArmDoneCb(const actionlib::SimpleClientGoalState& state,
-                               const control_msgs::FollowJointTrajectoryResultConstPtr& result);
-  void trajectoryRightArmDoneCb(const actionlib::SimpleClientGoalState& state,
-                                const control_msgs::FollowJointTrajectoryResultConstPtr& result);
-
   void executeFootstepCb(const vigir_footstep_planning_msgs::ExecuteStepPlanActionGoalConstPtr& goal);
   void resultFootstepCb(const vigir_footstep_planning_msgs::ExecuteStepPlanActionResultConstPtr& result);
-
-  void stepPlanActiveCb();
-  void stepPlanDoneCb(const actionlib::SimpleClientGoalState& state,
-                      const vigir_footstep_planning_msgs::ExecuteStepPlanResultConstPtr& result);
 
 private:
   void parseParameters(ros::NodeHandle nh);
@@ -76,8 +64,6 @@ private:
   std::vector<std::string> started_controllers_;
   std::vector<std::string> stopped_controllers_;
 
-  bool stand_complete_right_;
-  bool stand_complete_left_;
   bool allow_all_mode_transitions_;
 
   struct Mode
@@ -94,7 +80,6 @@ private:
   // subscriber
   ros::Subscriber execute_footstep_sub_;
   ros::Subscriber result_footstep_sub_;
-  ros::Subscriber ocs_mode_switch_sub_;
   ros::Subscriber allow_all_mode_transitions_sub_;
 
   // publisher

@@ -29,7 +29,6 @@ ControlModeSwitcher::ControlModeSwitcher(ros::NodeHandle& nh)
   allow_all_mode_transitions_sub_ = nh_.subscribe("control_mode_switcher/allow_all_mode_transitions", 1, &ControlModeSwitcher::allowAllModeTransitionsCb, this);
 
   // ros publisher
-  // mode_changed_pub_ = nh_.advertise<vigir_control_msgs::VigirControlMode>("/flor/controller/mode", 10, true);
   robot_init_pose_pub_ = nh_.advertise<std_msgs::String>("robotis/base/ini_pose", 1, false);
   control_mode_status_pub_ = nh_.advertise<thor_mang_control_msgs::ControlModeStatus>("control_mode_switcher/status", 1, true);
   allow_all_mode_transitions_ack_pub_ = nh_.advertise<std_msgs::Bool>("control_mode_switcher/allow_all_mode_transitions_ack", 1, true);
@@ -41,7 +40,6 @@ ControlModeSwitcher::ControlModeSwitcher(ros::NodeHandle& nh)
   list_ros_controllers_client_ = nh_.serviceClient<controller_manager_msgs::ListControllers>("joints/controller_manager/list_controllers");
 
   // ros action clients
-  //trajectory_client_ = new  TrajectoryActionClient("/vigir_move_group", true);
   trajectory_client_left_ = new TrajectoryActionClient("joints/left_arm_traj_controller/follow_joint_trajectory", true);
   trajectory_client_right_ = new TrajectoryActionClient("joints/right_arm_traj_controller/follow_joint_trajectory", true);
 
@@ -57,7 +55,7 @@ ControlModeSwitcher::ControlModeSwitcher(ros::NodeHandle& nh)
   modes_["stand_prep"].mode_switch_handle_ = boost::bind(&goToStandPrepMode, robot_init_pose_pub_);
   modes_["stand"].mode_switch_handle_ = boost::bind(&goToStandMode, trajectory_control_helper);
   //modes_["soft_stop"].mode_switch_handle_ = boost::bind(&goToSoftStop, step_plan_action_client);
-  modes_["shutdown"].mode_switch_handle_ = boost::bind(&goToShutdownMode, trajectory_control_helper);
+  //modes_["shutdown"].mode_switch_handle_ = boost::bind(&goToShutdownMode, trajectory_control_helper);
 
   // publish initial info
   control_mode_status_pub_.publish(getCurrentControlModeStatus());
@@ -67,13 +65,6 @@ ControlModeSwitcher::ControlModeSwitcher(ros::NodeHandle& nh)
   allow_all_mode_transitions_ack_pub_.publish(ack);
 
   getStartedAndStoppedRosControllers();
-
-  //       vigir_control_msgs::VigirControlMode changed_mode_msg;
-  //       changed_mode_msg.header.stamp = ros::Time::now();
-  //       changed_mode_msg.bdi_current_behavior = 1;
-  //       changed_mode_msg.control_mode = 0;
-  //
-  //       notifyNewControlMode("none", 0, changed_mode_msg);
 }
 
 ControlModeSwitcher::~ControlModeSwitcher()
@@ -312,9 +303,6 @@ thor_mang_control_msgs::ControlModeStatus ControlModeSwitcher::changeControlMode
     switch_successfull = switchRosControllers(controllers_to_start);
   }
 
-  //changed_mode_msg.bdi_current_behavior = bdi_control_modes[mode_idx_int];
-  //changed_mode_msg.control_mode = mode_idx_int;
-
   if (allow_all_mode_transitions_)
     switch_successfull = true;
 
@@ -329,8 +317,6 @@ thor_mang_control_msgs::ControlModeStatus ControlModeSwitcher::changeControlMode
     control_mode_status.current_control_mode = requested_mode;
     control_mode_status.allowed_control_modes = new_mode.allowed_transitions_;
     control_mode_status.status |= thor_mang_control_msgs::ControlModeStatus::MODE_ACCEPTED;
-
-    //notifyNewControlMode(mode_request, mode_idx_int, changed_mode_msg);
   }
   else
   {
@@ -344,40 +330,10 @@ thor_mang_control_msgs::ControlModeStatus ControlModeSwitcher::changeControlMode
   return control_mode_status;
 }
 
-//     void ControlModeSwitcher::notifyNewControlMode(std::string new_mode, int new_idx, vigir_control_msgs::VigirControlMode msg){
-//         mode_changed_pub_.publish(msg);
-//         std_msgs::String mode_name;
-//         mode_name.data = new_mode;
-//         mode_name_pub_.publish(mode_name);
-//         current_mode_ = new_mode;
-//         current_mode_int_ = new_idx;
-//         ROS_INFO("[ControlModeSwitcher] Successfully switched to mode %s !", new_mode.c_str());
-//     }
-
-void ControlModeSwitcher::trajectoryActiveCB()
-{
-}
-
-void ControlModeSwitcher::trajectoryFeedbackCB(const control_msgs::FollowJointTrajectoryFeedbackConstPtr& feedback)
-{
-}
-
-void ControlModeSwitcher::trajectoryLeftArmDoneCb(const actionlib::SimpleClientGoalState& state,
-                                                  const control_msgs::FollowJointTrajectoryResultConstPtr& result)
-{
-  stand_complete_right_ = true;
-}
-
-void ControlModeSwitcher::trajectoryRightArmDoneCb(const actionlib::SimpleClientGoalState& state,
-                                                   const control_msgs::FollowJointTrajectoryResultConstPtr& result)
-{
-  stand_complete_left_ = true;
-}
-
 void ControlModeSwitcher::executeFootstepCb(const vigir_footstep_planning_msgs::ExecuteStepPlanActionGoalConstPtr& goal)
 {
   //if (!goal->goal.step_plan.steps.empty()){
-  std::string new_mode = (current_mode_name_ == "stand_manipulate")? "walk_manipulate" : "walk";
+  std::string new_mode = (current_mode_name_ == "stand_manipulate") ? "walk_manipulate" : "walk";
   changeControlMode(new_mode);
   //}
   //TODO check for empty plans
@@ -391,15 +347,6 @@ void ControlModeSwitcher::resultFootstepCb(const vigir_footstep_planning_msgs::E
   //    std::string new_mode = (current_mode_ == "walk_manipulate")? "stand_manipulate" : "stand";
   //    changeControlMode(new_mode);
   //  }
-}
-
-void ControlModeSwitcher::stepPlanActiveCb()
-{
-}
-
-void ControlModeSwitcher::stepPlanDoneCb(const actionlib::SimpleClientGoalState& state,
-                                         const vigir_footstep_planning_msgs::ExecuteStepPlanResultConstPtr& result)
-{
 }
 
 void ControlModeSwitcher::parseParameters(ros::NodeHandle nh)
