@@ -4,32 +4,39 @@
 
 namespace control_mode_switcher
 {
-void goToStandPrepMode(ros::Publisher pub)
+bool goToStandPrepMode(ros::Publisher pub)
 {
   std_msgs::String msg;
   msg.data = "ini_pose";
   pub.publish(msg);
+  return true;
 }
 
-void goToStandMode(TrajectoryControlHelper::Ptr trajectory_control_helper)
+bool goToStandMode(TrajectoryControlHelper::Ptr trajectory_control_helper)
 {
   std::map<TrajectoryController, std::vector<double>> joint_config;
   joint_config[LEFT_ARM]  = {0.44, 1.31, 0.09, -0.52, 0.0, 0.0, 0.0};
   joint_config[RIGHT_ARM] = {-0.44, -1.31, -0.09, 0.52, 0.0, 0.0, 0.0};
   joint_config[HEAD]      = {0.4, 0.0};
   trajectory_control_helper->goToJointConfiguration(joint_config, 3.0, false);
+  return true;
 }
 
-void goToSoftStop(StepPlanActionClientPtr step_plan_action_client)
+bool goToSoftStop(StepPlanActionClientPtr step_plan_action_client)
 {
   if (!step_plan_action_client->waitForServer(ros::Duration(5.0)))
     ROS_WARN("[ControlModeSwitcher] Time out while waititing for step plan server");
 
   if (step_plan_action_client->isServerConnected())
+  {
     step_plan_action_client->sendGoal(vigir_footstep_planning_msgs::ExecuteStepPlanGoal());
+    return true;
+  }
+
+  return false;
 }
 
-void goToShutdownMode(TrajectoryControlHelper::Ptr trajectory_control_helper)
+bool goToShutdownMode(TrajectoryControlHelper::Ptr trajectory_control_helper)
 {
   for (int phase = 0; phase < 5; phase++)
   {
@@ -69,5 +76,6 @@ void goToShutdownMode(TrajectoryControlHelper::Ptr trajectory_control_helper)
 
     trajectory_control_helper->goToJointConfiguration(joint_config, 3.0, true);
   }
+  return true;
 }
 }

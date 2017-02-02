@@ -34,7 +34,7 @@ class ControlModeSwitcher
 {
 public:
   typedef actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> TrajectoryActionClient;
-  typedef boost::function<void ()> ModeSwitchHandle;
+  typedef boost::function<bool ()> ModeSwitchHandle;
 
   ControlModeSwitcher(ros::NodeHandle& nh);
   virtual ~ControlModeSwitcher();

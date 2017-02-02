@@ -269,9 +269,6 @@ thor_mang_control_msgs::ControlModeStatus ControlModeSwitcher::changeControlMode
   }
   Mode new_mode = itr->second;
 
-  // Publish changed mode
-  //changed_mode_msg.header.stamp = ros::Time::now();
-
   bool switch_successfull = true;
 
   // set control modules
@@ -309,14 +306,18 @@ thor_mang_control_msgs::ControlModeStatus ControlModeSwitcher::changeControlMode
   // call switch mode handler
   if (switch_successfull)
   {
-    if (!new_mode.mode_switch_handle_.empty())
-      new_mode.mode_switch_handle_();
+    if (!new_mode.mode_switch_handle_.empty() && !new_mode.mode_switch_handle_())
+    {
+      control_mode_status.status |= thor_mang_control_msgs::ControlModeStatus::MODE_REJECTED;
+    }
+    else
+    {
+      current_mode_name_ = requested_mode;
 
-    current_mode_name_ = requested_mode;
-
-    control_mode_status.current_control_mode = requested_mode;
-    control_mode_status.allowed_control_modes = new_mode.allowed_transitions_;
-    control_mode_status.status |= thor_mang_control_msgs::ControlModeStatus::MODE_ACCEPTED;
+      control_mode_status.current_control_mode = requested_mode;
+      control_mode_status.allowed_control_modes = new_mode.allowed_transitions_;
+      control_mode_status.status |= thor_mang_control_msgs::ControlModeStatus::MODE_ACCEPTED;
+    }
   }
   else
   {

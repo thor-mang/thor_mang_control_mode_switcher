@@ -42,10 +42,10 @@ namespace control_mode_switcher
 typedef actionlib::SimpleActionClient<vigir_footstep_planning_msgs::ExecuteStepPlanAction> StepPlanActionClient;
 typedef boost::shared_ptr<StepPlanActionClient> StepPlanActionClientPtr;
 
-void goToStandPrepMode(ros::Publisher pub);
-void goToStandMode(TrajectoryControlHelper::Ptr trajectory_control_helper);
-void goToSoftStop(StepPlanActionClientPtr step_plan_action_client);
-void goToShutdownMode(TrajectoryControlHelper::Ptr trajectory_control_helper);
+bool goToStandPrepMode(ros::Publisher pub);
+bool goToStandMode(TrajectoryControlHelper::Ptr trajectory_control_helper);
+bool goToSoftStop(StepPlanActionClientPtr step_plan_action_client);
+bool goToShutdownMode(TrajectoryControlHelper::Ptr trajectory_control_helper);
 }
 
 #endif
