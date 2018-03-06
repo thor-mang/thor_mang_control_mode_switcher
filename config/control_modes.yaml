@@ -33,12 +33,20 @@ control_mode_switcher:
             desired_controllers_to_start: ["torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller"]
             transitions:
                 - "walk"
+                - "l3_walk"
                 - "manipulate"
                 - "walk_manipulate"
                 - "whole_body"
 
         walk:
             ctrl_modules: ["base_module", "walking_module"]
+            transitions:
+                - "walk_manipulate"
+                - "stand"
+                - "stop"
+
+        l3_walk:
+            ctrl_modules: ["base_module", "l3_module"]
             transitions:
                 - "walk_manipulate"
                 - "stand"
