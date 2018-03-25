@@ -307,6 +307,8 @@ thor_mang_control_msgs::ControlModeStatus ControlModeSwitcher::changeControlMode
           }
         }
       }
+      else
+        ROS_WARN("[ControlModeSwitcher] RosController '%s' is unknown!", name.c_str());
     }
 
     switch_successfull &= set_joint_ctrl_modules_client_.call(srv);
