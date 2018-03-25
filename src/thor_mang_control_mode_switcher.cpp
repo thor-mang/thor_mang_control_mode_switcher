@@ -91,19 +91,15 @@ thor_mang_control_msgs::ControlModeStatus ControlModeSwitcher::getCurrentControl
 
 void ControlModeSwitcher::getStartedAndStoppedRosControllers()
 {
-  started_controllers_.clear();
-  stopped_controllers_.clear();
+  controllers_.clear();
 
   controller_manager_msgs::ListControllers srv;
   list_ros_controllers_client_.call(srv);
 
   for (int i = 0; i < srv.response.controller.size(); i++)
   {
-    controller_manager_msgs::ControllerState controller = srv.response.controller[i];
-    if (controller.state == "running")
-      started_controllers_.push_back(controller.name);
-    else
-      stopped_controllers_.push_back(controller.name);
+    const controller_manager_msgs::ControllerState& controller = srv.response.controller[i];
+    controllers_[controller.name] = controller;
   }
 }
 
@@ -112,31 +108,32 @@ bool ControlModeSwitcher::switchRosControllers(std::vector<std::string> desired_
   std::vector<std::string> controllers_to_stop;
   std::vector<std::string> controllers_to_start;
 
-  // Add undesired running controllers to stoping list
-  for (int i = 0; i < started_controllers_.size(); i++)
+  // Add undesired running controllers to stopping list
+  for (const std::pair<std::string, controller_manager_msgs::ControllerState>& pair : controllers_)
   {
+    const controller_manager_msgs::ControllerState& controller = pair.second;
+    if (controller.state != "running")
+      continue;
+
     bool should_be_stopped = true;
-    for (int j = 0; j < desired_controllers_to_start.size(); j++)
+    for (const std::string& name : desired_controllers_to_start)
     {
-      if (started_controllers_[i] == desired_controllers_to_start[j])
+      if (controller.name == name)
         should_be_stopped = false;
     }
 
     if (should_be_stopped)
-      controllers_to_stop.push_back(started_controllers_[i]);
+      controllers_to_stop.push_back(controller.name);
   }
 
   // Remove already running controllers from starting list
-  for (int i = 0; i < desired_controllers_to_start.size(); i++)
+  for (const std::string& name : desired_controllers_to_start)
   {
-    bool already_running = false;
-    for (int j = 0; j < started_controllers_.size(); j++)
-    {
-      if (started_controllers_[j] == desired_controllers_to_start[i])
-        already_running = true;
-    }
-    if (!already_running)
-      controllers_to_start.push_back(desired_controllers_to_start[i]);
+    std::map<std::string, controller_manager_msgs::ControllerState>::const_iterator itr = controllers_.find(name);
+    if (itr != controllers_.end() && itr->second.state == "running")
+      continue;
+
+    controllers_to_start.push_back(name);
   }
 
   if ((controllers_to_start.size() > 0) || (controllers_to_stop.size() > 0))
@@ -144,10 +141,7 @@ bool ControlModeSwitcher::switchRosControllers(std::vector<std::string> desired_
     controller_manager_msgs::SwitchController srv;
     srv.request.start_controllers = controllers_to_start;
     srv.request.stop_controllers = controllers_to_stop;
-    if (!allow_all_mode_transitions_)
-      srv.request.strictness = controller_manager_msgs::SwitchController::Request::STRICT;
-    else
-      srv.request.strictness = controller_manager_msgs::SwitchController::Request::BEST_EFFORT;
+    srv.request.strictness = controller_manager_msgs::SwitchController::Request::BEST_EFFORT;
 
     switch_ros_controllers_client_.call(srv);
     return srv.response.ok;
@@ -258,6 +252,8 @@ thor_mang_control_msgs::ControlModeStatus ControlModeSwitcher::changeControlMode
     return control_mode_status;
   }
 
+  getStartedAndStoppedRosControllers();
+
   // get new mode info
   std::map<std::string, Mode>::iterator itr = modes_.find(requested_mode);
   if (itr == modes_.end())
@@ -267,37 +263,61 @@ thor_mang_control_msgs::ControlModeStatus ControlModeSwitcher::changeControlMode
     control_mode_status.status |= thor_mang_control_msgs::ControlModeStatus::ERR_INVALID_BEHAVIOR_MODE;
     return control_mode_status;
   }
-  Mode new_mode = itr->second;
+  const Mode& new_mode = itr->second;
 
   bool switch_successfull = true;
 
-  // set control modules
-  for (std::string ctrl_module_name : new_mode.ctrl_modules_)
+  // activate control modules
+  for (const std::string& ctrl_module_name : new_mode.ctrl_modules_)
   {
     robotis_controller_msgs::SetCtrlModule srv;
     srv.request.module_name = ctrl_module_name;
     switch_successfull &= enable_ctrl_modules_client_.call(srv);
   }
 
-  // set joint control modules
-  if (!new_mode.joint_ctrl_modules_.empty())
+  // activate joint control modules
+  if (!new_mode.joint_ctrl_modules_.empty() || !new_mode.desired_controllers_.empty())
   {
     robotis_controller_msgs::SetJointCtrlModule srv;
-    for (std::pair<std::string, std::string> joint_ctrl_module : new_mode.joint_ctrl_modules_)
+
+    // get pre configured joint ctrl modules
+    for (const std::pair<std::string, std::string>& joint_ctrl_module : new_mode.joint_ctrl_modules_)
     {
-      srv.request.joint_ctrl_modules.module_name.push_back(joint_ctrl_module.first);
-      srv.request.joint_ctrl_modules.joint_name.push_back(joint_ctrl_module.second);
+      srv.request.joint_ctrl_modules.joint_name.push_back(joint_ctrl_module.first);
+      srv.request.joint_ctrl_modules.module_name.push_back(joint_ctrl_module.second);
     }
+
+    // complete list from ros control resource list
+    for (const std::string& name : new_mode.desired_controllers_)
+    {
+      auto itr = controllers_.find(name);
+      if (itr != controllers_.end())
+      {
+        const controller_manager_msgs::ControllerState& controller = itr->second;
+
+        for (const controller_manager_msgs::HardwareInterfaceResources& hw_resource : controller.claimed_resources)
+        {
+          for (const std::string& resource : hw_resource.resources)
+          {
+            if (new_mode.joint_ctrl_modules_.find(resource) == new_mode.joint_ctrl_modules_.end())
+            {
+              srv.request.joint_ctrl_modules.joint_name.push_back(resource);
+              srv.request.joint_ctrl_modules.module_name.push_back("ros_control_module");
+            }
+          }
+        }
+      }
+    }
+
     switch_successfull &= set_joint_ctrl_modules_client_.call(srv);
   }
 
   // switch ros controllers
   if (requested_mode != "none")
   {
-    getStartedAndStoppedRosControllers();
-
     std::vector<std::string> controllers_to_start = new_mode.desired_controllers_;
-    switch_successfull = switchRosControllers(controllers_to_start);
+
+    switch_successfull &= switchRosControllers(controllers_to_start);
   }
 
   if (allow_all_mode_transitions_)
@@ -357,7 +377,7 @@ void ControlModeSwitcher::parseParameters(ros::NodeHandle nh)
 
   XmlRpc::XmlRpcValue default_ctrl_modules_param;
   nh.getParam("control_mode_switcher/control_mode_to_controllers/all/joint_ctrl_modules", default_ctrl_modules_param);
-  std::vector<std::pair<std::string, std::string>> default_joint_ctrl_modules = parseJointCtrlModules(default_ctrl_modules_param);
+  std::map<std::string, std::string> default_joint_ctrl_modules = parseJointCtrlModules(default_ctrl_modules_param);
 
   std::vector<std::string> default_desired_controllers;
   nh.getParam("control_mode_switcher/control_mode_to_controllers/all/desired_controllers_to_start", default_desired_controllers);
@@ -420,7 +440,7 @@ void ControlModeSwitcher::parseParameters(ros::NodeHandle nh)
       // add default control modules
       modes_[mode_name].ctrl_modules_.insert(modes_[mode_name].ctrl_modules_.end(), default_ctrl_modules.begin(), default_ctrl_modules.end());
       // add default joint control modules
-      modes_[mode_name].joint_ctrl_modules_.insert(modes_[mode_name].joint_ctrl_modules_.end(), default_joint_ctrl_modules.begin(), default_joint_ctrl_modules.end());
+      modes_[mode_name].joint_ctrl_modules_.insert(default_joint_ctrl_modules.begin(), default_joint_ctrl_modules.end());
       // add default controllers
       modes_[mode_name].desired_controllers_.insert(modes_[mode_name].desired_controllers_.end(), default_desired_controllers.begin(), default_desired_controllers.end());
       // add default transitions
@@ -434,9 +454,9 @@ void ControlModeSwitcher::parseParameters(ros::NodeHandle nh)
   }
 }
 
-std::vector<std::pair<std::string, std::string>> ControlModeSwitcher::parseJointCtrlModules(XmlRpc::XmlRpcValue param) const
+std::map<std::string, std::string> ControlModeSwitcher::parseJointCtrlModules(XmlRpc::XmlRpcValue param) const
 {
-  std::vector<std::pair<std::string, std::string>> joint_ctrl_modules;
+  std::map<std::string, std::string> joint_ctrl_modules;
 
   if (param.getType() == XmlRpc::XmlRpcValue::TypeArray)
   {
@@ -456,7 +476,7 @@ std::vector<std::pair<std::string, std::string>> ControlModeSwitcher::parseJoint
         XmlRpc::XmlRpcValue joints = module_itr->second;
 
         for (size_t joints_idx = 0; joints_idx < joints.size(); joints_idx++)
-          joint_ctrl_modules.push_back(std::make_pair(module_name, joints[joints_idx]));
+          joint_ctrl_modules[joints[joints_idx]] = module_name;
       }
     }
   }

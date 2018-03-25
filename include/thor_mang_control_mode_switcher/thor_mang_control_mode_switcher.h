@@ -57,18 +57,17 @@ protected:
 
 private:
   void parseParameters(ros::NodeHandle nh);
-  std::vector<std::pair<std::string, std::string>> parseJointCtrlModules(XmlRpc::XmlRpcValue param) const;
+  std::map<std::string, std::string> parseJointCtrlModules(XmlRpc::XmlRpcValue param) const;
 
   ros::NodeHandle nh_;
 
-  std::vector<std::string> started_controllers_;
-  std::vector<std::string> stopped_controllers_;
+  std::map<std::string, controller_manager_msgs::ControllerState> controllers_;
 
   bool allow_all_mode_transitions_;
 
   struct Mode
   {
-    std::vector<std::pair<std::string, std::string>> joint_ctrl_modules_;
+    std::map<std::string, std::string> joint_ctrl_modules_; // joint -> module mapping
     std::vector<std::string> ctrl_modules_;
     std::vector<std::string> desired_controllers_;
     std::vector<std::string> allowed_transitions_;
