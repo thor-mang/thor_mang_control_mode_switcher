@@ -83,7 +83,6 @@ void TrajectoryControlHelper::goToJointConfiguration(std::map<TrajectoryControll
 
     if (controller_clients[iter->first]->isServerConnected())
     {
-      // Goal for left arm
       trajectory_msgs::JointTrajectory joint_trajectory;
       joint_trajectory.joint_names = names;
 
@@ -94,7 +93,7 @@ void TrajectoryControlHelper::goToJointConfiguration(std::map<TrajectoryControll
 
       trajectory_goal.trajectory = joint_trajectory;
 
-      //Send goals to controllers
+      // Send goals to controllers
       controller_clients[iter->first]->sendGoal(trajectory_goal, boost::bind(&TrajectoryControlHelper::trajectoryDoneCb, this, _1, _2),
                                                 boost::bind(&TrajectoryControlHelper::trajectoryActiveCB, this),
                                                 boost::bind(&TrajectoryControlHelper::trajectoryFeedbackCB, this, _1));

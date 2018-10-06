@@ -8,10 +8,7 @@
 
 #include <trajectory_msgs/JointTrajectoryPoint.h>
 
-#include <control_msgs/FollowJointTrajectoryGoal.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
-#include <control_msgs/FollowJointTrajectoryActionFeedback.h>
-#include <control_msgs/FollowJointTrajectoryActionResult.h>
 
 #include <moveit_msgs/Constraints.h>
 #include <moveit_msgs/JointConstraint.h>
