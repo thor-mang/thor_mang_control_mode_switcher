@@ -33,20 +33,19 @@ control_mode_switcher:
                 - "manipulate"
                 - "walk_manipulate"
                 - "whole_body"
+                - "whole_body_compliance"
 
         walk:
             ctrl_modules: ["base_module", "walking_module"]
             transitions:
                 - "walk_manipulate"
                 - "stand"
-                - "stop"
 
         l3_walk:
             ctrl_modules: ["base_module", "l3_module"]
             transitions:
                 - "walk_manipulate"
                 - "stand"
-                - "stop"
 
         walk_manipulate:
             joint_ctrl_modules: 
@@ -79,8 +78,12 @@ control_mode_switcher:
             transitions:
                 - "stand"
                 - "manipulate"
+                
+        whole_body_compliance:
+            ctrl_modules: ["base_module"]            
+            desired_controllers_to_start: ["whole_body_compliance_controller"]
+            transitions:
+                - "stand"
 
         shutdown:
             desired_controllers_to_start: ["torso_traj_controller", "left_arm_traj_controller", "right_arm_traj_controller", "left_leg_traj_controller", "right_leg_traj_controller"]
-            transitions:
-                - "stop"
